@@ -32,11 +32,32 @@ float prevX;
 int stepCounter;
 float calibrationOffset;
 
+/**
+ * @returns calibrated x axis gyro data
+ */
+float readGyroX() {
+  return myIMU.readFloatGyroX() - calibrationOffset;
+}
+
+void calibrateSensor() {
+  // calibrate sensor 
+  float calibrationSum = 0.0f;
+  for (int i = 0; i < CALIBRATION_CYCLES; i++) {
+    float calibReading = myIMU.readFloatGyroX();
+    Serial.println(calibReading);
+    calibrationSum += calibReading;
+    delay(500);
+  }
+
+  calibrationOffset = calibrationSum / CALIBRATION_CYCLES; // find average offset
+
+  Serial.println("Calibration offset: ");
+  Serial.print(calibrationOffset, 3);
+}
+
 void setup() {
   Serial.begin(9600);
   delay(500);
-
-  
   
   Wire.begin();
   delay(10);
@@ -50,16 +71,9 @@ void setup() {
   if( myIMU.initialize(BASIC_SETTINGS) )
     Serial.println("Loaded Settings.");
 
-
-  // calibrate sensor 
-  float calibrationSum = 0.0f;
-  for (int i = 0; i < CALIBRATION_CYCLES; i++) {
-    calibrationSum += myIMU.readFloatGyroX();
-    delay(50);
-  }
-
-  calibrationOffset = calibrationSum / CALIBRATION_CYCLES; // find average offset
+  Serial.println("Calibrating sensor");
   
+  calibrateSensor();
 
   prevX = X_INIT;
   stepCounter = STEP_INIT;
@@ -69,7 +83,7 @@ void setup() {
 void loop()
 {
   if (prevX != X_INIT) { // if a prev value was just read
-    float currX = myIMU.readFloatGyroX();
+    float currX = readGyroX();
     Serial.print("Curr x");
     Serial.println(currX);
 
@@ -83,13 +97,15 @@ void loop()
     prevX = currX;
 
     Serial.println(prevX);
-  } else { // if using gyro for first read, update with the 
-    prevX = myIMU.readFloatGyroX();
+  } else { // if using gyro for first read, update with the current gyro reading
+    prevX = readGyroX();
   }
 
   Serial.print("\nGyroscope:\n");
   Serial.print(" X = ");
   Serial.println(myIMU.readFloatGyroX(), 3);
+  Serial.print(" Calibrated X = ");
+  Serial.println(readGyroX(), 3);
 
   Serial.print("Step count: ");
   Serial.println(stepCounter);
