@@ -44,7 +44,7 @@ class MyCallbacks: public BLECharacteristicCallbacks {
 
      if(value == "mySteps") {
       pCharacteristic->setValue(stepCounter);
-      pCharacteristic->notify();
+      pCharacteristic->notify(); // send step count
      }
    }
 };
@@ -92,6 +92,7 @@ void setup() {
   
   calibrateSensor();
 
+// setupt bluetooth
   BLEDevice::init("SDSUCS");
  BLEServer *pServer = BLEDevice::createServer();
  
@@ -100,7 +101,7 @@ void setup() {
  BLECharacteristic *pCharacteristic = pService->createCharacteristic(
                                         CHARACTERISTIC_UUID,
                                         BLECharacteristic::PROPERTY_READ |
-                                        BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_NOTIFY
+                                        BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_NOTIFY // enable notify to send step count
                                       );
  
  pCharacteristic->setCallbacks(new MyCallbacks());
@@ -137,6 +138,7 @@ void loop()
     prevX = readGyroX();
   }
 
+  // print values to serial
   Serial.print("\nGyroscope:\n");
   Serial.print(" X = ");
   Serial.println(myIMU.readFloatGyroX(), 3);
