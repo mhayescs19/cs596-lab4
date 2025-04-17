@@ -21,16 +21,33 @@ Distributed as-is; no warranty is given.
 
 #include "SparkFunLSM6DSO.h"
 #include "Wire.h"
-#define STEP_THRESHOLD 5.0f
+#include <Arduino.h>
+#include <BLEDevice.h>
+
+#define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+#define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
+#define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+
+#define STEP_THRESHOLD 2.0f
 #define X_INIT 0.0f
 #define STEP_INIT 0
 #define CALIBRATION_CYCLES 5
-//#include "SPI.h"
 
 LSM6DSO myIMU; //Default constructor is I2C, addr 0x6B
 float prevX;
 int stepCounter;
 float calibrationOffset;
+
+class MyCallbacks: public BLECharacteristicCallbacks {
+   void onWrite(BLECharacteristic *pCharacteristic) {
+     std::string value = pCharacteristic->getValue();
+
+     if(value == "mySteps") {
+      pCharacteristic->setValue(stepCounter);
+      pCharacteristic->notify();
+     }
+   }
+};
 
 /**
  * @returns calibrated x axis gyro data
@@ -74,6 +91,25 @@ void setup() {
   Serial.println("Calibrating sensor");
   
   calibrateSensor();
+
+  BLEDevice::init("SDSUCS");
+ BLEServer *pServer = BLEDevice::createServer();
+ 
+ BLEService *pService = pServer->createService(SERVICE_UUID);
+ 
+ BLECharacteristic *pCharacteristic = pService->createCharacteristic(
+                                        CHARACTERISTIC_UUID,
+                                        BLECharacteristic::PROPERTY_READ |
+                                        BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_NOTIFY
+                                      );
+ 
+ pCharacteristic->setCallbacks(new MyCallbacks());
+ 
+ pCharacteristic->setValue("Hello World");
+ pService->start();
+ 
+ BLEAdvertising *pAdvertising = pServer->getAdvertising();
+ pAdvertising->start();
 
   prevX = X_INIT;
   stepCounter = STEP_INIT;
